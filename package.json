@@ -1,0 +1,35 @@
+{
+  "name": "restaurant-saas",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev:web": "npm run dev -w @restaurant/web",
+    "dev:api": "npm run dev -w @restaurant/api",
+    "build": "npm run build --workspaces",
+    "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "test": "tsx --test tests/*.test.ts",
+    "test:db": "tsx --test tests/*.integration.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "dotenv": "17.2.3",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "22.18.12",
+    "@types/pg": "8.15.6",
+    "prettier": "3.6.2",
+    "prisma": "7.10.1",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

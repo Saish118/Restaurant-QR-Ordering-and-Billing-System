@@ -1,0 +1,9 @@
+import "dotenv/config";
+import { defineConfig } from "prisma/config";
+export default defineConfig({
+  schema: "packages/database/prisma/schema.prisma",
+  migrations: { path: "packages/database/prisma/migrations" },
+  datasource: {
+    url: process.env.DIRECT_URL ?? "postgresql://localhost:55439/restaurant",
+  },
+});
