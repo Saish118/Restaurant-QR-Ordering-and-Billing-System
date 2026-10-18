@@ -1,6 +1,6 @@
 # Simple multilingual interface
 
-The current sign-in, restaurant selection, owner settings and platform controls support English, Marathi and Hindi. A language selector is visible before sign-in and remains available after sign-in. Choices use native names: English, मराठी, हिन्दी.
+Restaurant/hotel sign-in, restaurant selection and owner settings support English, Marathi and Hindi. The main platform-admin panel uses English only. A language selector is visible before sign-in and remains available after sign-in. Choices use native names: English, मराठी, हिन्दी.
 
 Translations live in apps/web/lib/i18n/messages.ts. All dictionaries have the same TypeScript-enforced keys. Use useLanguage() in client components; do not embed English-only action labels or error sentences. Keep backend authorization and state identifiers language independent. The client maps HTTP failures to translated messages without exposing database errors. Messages remain translated if the user switches language after an error occurs.
 
@@ -13,3 +13,7 @@ Translate dates, money and quantities using Intl for the selected language and r
 Restaurant names, addresses and owner-entered content retain their original text. This release does not automatically translate menu content. When menu management is built, support optional owner-provided names/descriptions per language with fallback to the restaurant's original content. Never translate prices, IDs, authorization decisions or stored order snapshots.
 
 Verification covers every dictionary key, language fallback and preferences, mobile screens in all three languages, translated validation/errors and workspace changes without modifying restaurant data. Native speakers should review wording with the pilot restaurants before broad rollout.
+
+## Panel boundaries
+
+The main platform-admin panel is at `/admin` and is English-only, including sign-in, settings, actions and errors. It has no language selector and does not overwrite the saved restaurant language preference. The restaurant/hotel management panel is at `/` and retains English, Marathi and Hindi. Even an operator with both roles uses owner memberships in the restaurant panel; global restaurant provisioning and platform controls are shown only in the admin panel. Backend role checks remain authoritative. Customer QR screens must use the shared language dictionaries and selector when implemented.

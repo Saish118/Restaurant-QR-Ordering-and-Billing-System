@@ -88,7 +88,14 @@ test("workspace actions, settings and errors translate without changing restaura
       json: {
         userId: "11111111-1111-4111-8111-111111111111",
         platformAdmin: true,
-        memberships: [],
+        memberships: [
+          {
+            restaurant_id: "22222222-2222-4222-8222-222222222222",
+            name: "Demo Restaurant",
+            role: "OWNER",
+            status: "TRIAL",
+          },
+        ],
       },
     }),
   );
@@ -172,4 +179,130 @@ test("sign-in never submits a password in the URL when JavaScript is unavailable
   } finally {
     await context.close();
   }
+});
+
+test("platform admin stays English while restaurant language preference is retained", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("restaurant-language", "mr"),
+  );
+  await page.route("**/auth/v1/token?*", (route) =>
+    route.fulfill({
+      json: {
+        access_token: "test-token",
+        refresh_token: "test-refresh",
+        expires_in: 3600,
+        token_type: "bearer",
+        user: {
+          id: "11111111-1111-4111-8111-111111111111",
+          aud: "authenticated",
+          email: "test@example.com",
+          app_metadata: {},
+          user_metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      },
+    }),
+  );
+  await page.route("**/v1/me", (route) =>
+    route.fulfill({
+      json: {
+        userId: "11111111-1111-4111-8111-111111111111",
+        platformAdmin: true,
+        memberships: [],
+      },
+    }),
+  );
+  await page.route("**/v1/admin/restaurants", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          name: "Demo Restaurant",
+          status: "TRIAL",
+          slug: "demo-restaurant",
+        },
+      ],
+    }),
+  );
+  await page.goto("/admin");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Language / भाषा" }),
+  ).toHaveCount(0);
+  await page
+    .getByLabel("Email address", { exact: true })
+    .fill("test@example.com");
+  await page.getByLabel("Password", { exact: true }).fill("test-password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your restaurants" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("+ Add a restaurant", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "मराठी", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() => localStorage.getItem("restaurant-language")),
+  ).toBe("mr");
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "आपले स्वागत आहे" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "मराठी", exact: true }),
+  ).toBeVisible();
+});
+
+test("restaurant owner cannot enter the platform admin workspace", async ({
+  page,
+}) => {
+  await page.route("**/auth/v1/token?*", (route) =>
+    route.fulfill({
+      json: {
+        access_token: "test-token",
+        refresh_token: "test-refresh",
+        expires_in: 3600,
+        token_type: "bearer",
+        user: {
+          id: "11111111-1111-4111-8111-111111111111",
+          aud: "authenticated",
+          email: "test@example.com",
+          app_metadata: {},
+          user_metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      },
+    }),
+  );
+  await page.route("**/auth/v1/logout*", (route) =>
+    route.fulfill({ status: 204 }),
+  );
+  await page.route("**/v1/me", (route) =>
+    route.fulfill({
+      json: {
+        userId: "11111111-1111-4111-8111-111111111111",
+        platformAdmin: false,
+        memberships: [],
+      },
+    }),
+  );
+  await page.goto("/admin");
+  await page
+    .getByLabel("Email address", { exact: true })
+    .fill("test@example.com");
+  await page.getByLabel("Password", { exact: true }).fill("test-password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "You do not have permission for this action.",
+  );
+  await expect(
+    page.getByText("+ Add a restaurant", { exact: true }),
+  ).toHaveCount(0);
 });

@@ -94,3 +94,5 @@ npx tsx scripts/seed-demo.ts VERIFIED_ADMIN_AUTH_USER_UUID
 The command uses backend permission checks and is idempotent by the demo slug; it does not create an Auth account or overwrite an existing restaurant. Real user passwords must be set directly in Supabase, never passed in chat or shell arguments.
 
 English, मराठी and हिन्दी are available throughout the current UI, with a remembered device preference. See [language guidance](docs/languages.md). Menu and ordering workflows are still subsequent phases.
+
+Panel entry points: `http://localhost:3000/admin` is the English-only main system administration panel. `http://localhost:3000` is restaurant/hotel management with English, Marathi and Hindi. The same account can have both roles; each entry point displays controls for its purpose. Customer QR screens will also support the three languages when implemented.

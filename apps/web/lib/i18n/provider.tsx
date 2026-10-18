@@ -21,9 +21,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } catch {}
     change(preferredLanguage(saved, navigator.language));
   }, []);
-  useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
   function setLanguage(value: Language) {
     change(value);
     try {
@@ -38,8 +35,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     </LocaleContext.Provider>
   );
 }
-export function useLanguage() {
+export function useLanguage(englishOnly = false) {
   const context = useContext(LocaleContext);
+  const language = englishOnly ? "en" : (context?.language ?? "en");
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   if (!context) throw new Error("LanguageProvider required");
-  return context;
+  return { ...context, language, t: messages[language] };
 }

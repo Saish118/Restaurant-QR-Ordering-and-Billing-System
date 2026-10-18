@@ -26,3 +26,7 @@ The API integration verifier is replaced only inside the test process; it does n
 - Sign-in forms use POST as a non-JavaScript fallback, so failed hydration cannot put credentials in URL query parameters. Browser tests use localhost consistently with the running app and configured API origin.
 
 The latest Supabase security advisor flags leaked-password protection as disabled. Supabase makes that feature available on Pro and above, so the Free pilot has not been upgraded. Track this limitation before production rollout: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+## Panel language scope update
+
+Seven browser scenarios pass after separating `/admin` (English-only platform administration) from `/` (multilingual restaurant/hotel management). Coverage verifies that a saved Marathi preference does not translate admin or expose its language selector, that the preference remains available on returning to restaurant management, and that a restaurant-only account is denied entry to the platform-admin workspace. Both application builds pass. No database or backend authorization changes were needed.
