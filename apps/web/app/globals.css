@@ -6,13 +6,16 @@ body {
   margin: 0;
   background: #f7f7f2;
   color: #20372d;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    Arial, "Noto Sans Devanagari", "Kohinoor Devanagari", "Nirmala UI", Mangal,
+    sans-serif;
+  line-height: 1.65;
 }
 input,
 select,
 textarea {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   border: 1px solid #d5dcd5;
   border-radius: 10px;
   padding: 10px 12px;
@@ -26,6 +29,8 @@ label {
   font-weight: 600;
 }
 input[type="checkbox"] {
+  flex-shrink: 0;
+  accent-color: #123e31;
   width: 20px;
   min-height: 20px;
 }
@@ -37,4 +42,11 @@ button:disabled {
 }
 ::selection {
   background: #d5ebbb;
+}
+/* Keep the whole checkbox label easy to tap, including in Devanagari. */
+label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
 }

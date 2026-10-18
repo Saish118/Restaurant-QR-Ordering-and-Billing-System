@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "node:path";
+config({ path: resolve(__dirname, "../../../../.env"), quiet: true });
 import { z } from "zod";
 export const env = z
   .object({

@@ -4,13 +4,14 @@ export default defineConfig({
   testMatch: "*.spec.ts",
   use: {
     headless: true,
+    baseURL: "http://localhost:3000",
     ...(process.env.PLAYWRIGHT_CHANNEL
       ? { channel: process.env.PLAYWRIGHT_CHANNEL }
       : {}),
   },
   webServer: {
-    command: "npm run dev -w @restaurant/web -- --hostname 127.0.0.1",
-    url: "http://127.0.0.1:3000",
+    command: "npm run dev -w @restaurant/web -- --hostname localhost",
+    url: "http://localhost:3000",
     reuseExistingServer: true,
   },
 });

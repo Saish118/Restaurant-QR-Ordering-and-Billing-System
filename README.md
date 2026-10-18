@@ -17,7 +17,7 @@ Use Node 22.12+ (tested locally with Node 26) and npm. From this directory:
 
 ```sh
 npm ci
-cp .env.example .env
+cp -n .env.example .env
 cp -n apps/web/.env.example apps/web/.env.local
 npm run db:generate
 ```
@@ -78,3 +78,19 @@ Implemented: repository/env handling, frontend account/workspace UI, Supabase to
 Not yet implemented: staff PIN endpoints, menus/tables UI, orders/bills, guest capability exchange, realtime subscription authorization, storage uploads, offline service worker, subscription enforcement, payment/GST integrations and full operational dashboards. The PWA manifest is present; offline caching is intentionally deferred until cache boundaries are tested. The next phase is menu and table management, followed by visit/session and staff ordering.
 
 Before a live pilot, complete the operational phases and reliability tests, configure authentication abuse protection/MFA, verify restore capability and actual Free-tier quotas, and test weak-network reconnect flows. This foundation is not a production readiness claim.
+
+## Current local pilot setup
+
+The ignored root `.env` now contains a restricted restaurant_app connection for this Supabase project, plus the publishable Auth key. Both local env files are configured on this Mac; preserve them instead of overwriting them with examples. The API explicitly resolves the root env file even when npm runs it from apps/api. It never needs the migration/admin database password.
+
+The pooler connection uses `sslmode=verify-full` and `sslrootcert` pointing to the checked-in public Supabase CA certificate at `config/certs/supabase-ca-2021.crt`. This public certificate was downloaded from the certificate link in the project’s Database Settings. The private database password exists only in the ignored local env file with owner-only permissions. When deploying or moving to another computer, configure fresh environment secrets and the appropriate certificate path; never commit a connection string containing a password. Runtime access was enabled using an environment-specific role configuration operation, not a checked-in password migration.
+
+The first verified Auth account has been granted platform-admin access. `Demo Restaurant` is provisioned with the same account as owner, QR ordering disabled and a pilot trial subscription. No sample orders or payments were created. To create the demo on another environment after bootstrapping a verified administrator:
+
+```sh
+npx tsx scripts/seed-demo.ts VERIFIED_ADMIN_AUTH_USER_UUID
+```
+
+The command uses backend permission checks and is idempotent by the demo slug; it does not create an Auth account or overwrite an existing restaurant. Real user passwords must be set directly in Supabase, never passed in chat or shell arguments.
+
+English, मराठी and हिन्दी are available throughout the current UI, with a remembered device preference. See [language guidance](docs/languages.md). Menu and ordering workflows are still subsequent phases.
