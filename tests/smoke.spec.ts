@@ -134,6 +134,9 @@ test("workspace actions, settings and errors translate without changing restaura
     page.getByRole("heading", { name: "आपली रेस्टॉरंट्स" }),
   ).toBeVisible();
   await page.getByRole("button", { name: /Demo Restaurant/ }).click();
+  await page
+    .getByRole("button", { name: "रेस्टॉरंटची सेटिंग्ज", exact: true })
+    .click();
   await expect(page.getByLabel("रेस्टॉरंटचा पत्ता")).toHaveValue("Pune");
   await page.getByRole("button", { name: "बदल जतन करा" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(

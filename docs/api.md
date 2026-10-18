@@ -41,3 +41,24 @@ These are contracts to implement in later phases; no successful placeholder rout
 | Later             | GET/POST /restaurants/:id/service-requests; PATCH /:requestId                            | Valid visit/staff, role restrictions          |
 
 Order input will contain only session selector, item IDs, quantities and bounded notes. No client unit prices/tax/totals/role/restaurant ownership claims are accepted. Staff and QR invoke the same order domain service. Listing endpoints must be paginated before production.
+
+## Phase 3 implemented endpoints
+
+| Method and path                                    | Permission                             | Behavior                                                                                             |
+| -------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| GET /restaurants/:id/menu/categories               | Restaurant staff / owner / super admin | Up to 200 tenant categories                                                                          |
+| POST /restaurants/:id/menu/categories              | Owner / super admin                    | name, optional sortOrder; audited                                                                    |
+| PATCH /restaurants/:id/menu/categories/:categoryId | Owner / super admin                    | name and optional sortOrder; tenant-scoped; audited                                                  |
+| GET /restaurants/:id/menu/items                    | Restaurant staff / owner / super admin | Up to 1,000 tenant dishes                                                                            |
+| POST /restaurants/:id/menu/items                   | Owner / super admin                    | categoryId, name, priceMinor; optional taxBps, available, vegetarian, special                        |
+| PATCH /restaurants/:id/menu/items/:itemId          | Owner / super admin                    | Partial update; omitted fields stay unchanged; audited                                               |
+| GET /restaurants/:id/tables                        | Restaurant staff / owner / super admin | Up to 500 physical tables; never includes qr_reference                                               |
+| POST /restaurants/:id/tables                       | Owner / super admin                    | label only; works in billing-only mode; audited                                                      |
+| PATCH /restaurants/:id/tables/:tableId             | Owner / super admin                    | label and/or active; active visits prevent disabling; audited                                        |
+| GET /admin/restaurants/:id/tables/:tableId/qr      | Super admin only                       | Returns setup preview SVG and URL; QR access must already be enabled and the table/restaurant active |
+
+Menu/table mutations reject unknown fields. A restaurant cannot add product-access fields to a table or menu request to enable QR. Missing or foreign-tenant child records return 404 after restaurant authorization. Prices are integer minor units; the UI accepts rupees and converts without floating-point rounding. Current requests are small-restaurant pilot lists with explicit caps; pagination is required before lifting those caps.
+
+`qr_ordering_enabled` is the product-mode entitlement, controlled exclusively through the main-admin restaurant endpoint. Subscription payment processing is not implemented. Owners see the purchased mode read-only. Subscription changes and QR flag changes are additionally protected by an invoker trigger under the restricted runtime database role. A suspended tenant remains blocked even with a valid staff login.
+
+The generated table QR is a setup preview only. Its customer menu/order URL will become functional with the customer module. Do not treat the permanent QR reference as an active-visit credential. Future guest endpoints must independently check restaurant status, QR entitlement and fresh dining-session capability on every request.

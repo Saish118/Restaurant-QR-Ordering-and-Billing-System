@@ -30,3 +30,9 @@ The latest Supabase security advisor flags leaked-password protection as disable
 ## Panel language scope update
 
 Seven browser scenarios pass after separating `/admin` (English-only platform administration) from `/` (multilingual restaurant/hotel management). Coverage verifies that a saved Marathi preference does not translate admin or expose its language selector, that the preference remains available on returning to restaurant management, and that a restaurant-only account is denied entry to the platform-admin workspace. Both application builds pass. No database or backend authorization changes were needed.
+
+## Menu tables and main-admin product access
+
+Six unit tests pass, including exact integer price conversion. Three PostgreSQL integration suites pass, including tenant ownership for categories/items/tables, main-admin-only restaurant/QR control, raw owner-context rejection of QR/subscription changes, QR preview rejection in billing-only mode, availability updates preserving dish metadata, active-visit table protection and menu changes preserving historical order-price snapshots. Nine browser scenarios cover mobile menu/table workflows, multilingual restaurant management, English-only administration and restricted QR preview controls. Both application builds pass. The mobile menu screen was visually inspected.
+
+The new mode-control migration is applied to the pilot Supabase project. No plan flag or customer data was changed by tests: backend integration tests run only in disposable local PostgreSQL and browser tests mock their data. The hosted database advisor reports only the existing Free-plan leaked-password-protection warning, documented above. Customer QR ordering, dining-session APIs and billing flows are still not implemented; generated QR images are marked as setup previews.

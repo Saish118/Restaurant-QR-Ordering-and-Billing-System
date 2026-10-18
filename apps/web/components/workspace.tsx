@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { RestaurantTools } from "./restaurant-tools";
 import { Button } from "./ui/button";
 import { useLanguage } from "../lib/i18n/provider";
 import { languages, type MessageKey } from "../lib/i18n/messages";
@@ -41,6 +42,9 @@ export default function Workspace({
   const [message, setMessage] = useState<MessageKey | null>(null);
   const [isError, setIsError] = useState(false);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [section, setSection] = useState<"menu" | "tables" | "settings">(
+    "menu",
+  );
   const [selected, setSelected] = useState<Restaurant | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -157,6 +161,7 @@ export default function Workspace({
         `/restaurants/${restaurant.id}/settings`,
       );
       setSelected(restaurant);
+      setSection("menu");
       setSettings(data);
       setConfirmPause(false);
     });
@@ -167,7 +172,9 @@ export default function Workspace({
     await run(async () => {
       await request(`/restaurants/${selected!.id}/settings`, token, "PATCH", {
         address: String(data.get("address")),
-        customerBillVisible: data.has("bill"),
+        customerBillVisible: settings?.qr_ordering_enabled
+          ? data.has("bill")
+          : (settings?.customer_bill_visible ?? false),
         waiterAllTables: data.has("tables"),
       });
       setMessage("saved");
@@ -461,49 +468,110 @@ export default function Workspace({
                   >
                     ← {t.back}
                   </button>
-                  <form
-                    method="post"
-                    key={selected.id}
-                    onSubmit={save}
-                    className="space-y-5 rounded-2xl border border-stone-200 bg-white p-6"
-                    aria-busy={busy}
-                  >
-                    <h2 className="text-lg font-semibold">{t.settings}</h2>
-                    <label>
-                      {t.address}
-                      <textarea
-                        name="address"
-                        rows={3}
-                        maxLength={500}
-                        defaultValue={settings.address ?? ""}
+                  {!platformPanel && (
+                    <nav
+                      aria-label={t.workspace}
+                      className="mb-5 flex flex-wrap gap-2"
+                    >
+                      {(
+                        [
+                          ["menu", t.menu],
+                          ["tables", t.diningTables],
+                          ["settings", t.settings],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          type="button"
+                          key={value}
+                          aria-pressed={section === value}
+                          onClick={() => setSection(value)}
+                          className={`min-h-11 rounded-xl px-4 text-sm font-semibold ${section === value ? "bg-emerald-950 text-white" : "border border-stone-200 bg-white"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </nav>
+                  )}
+                  {!platformPanel && section !== "settings" && (
+                    <RestaurantTools
+                      key={`${selected.id}-${section}`}
+                      restaurantId={selected.id}
+                      view={section}
+                      platformPanel={false}
+                      qrEnabled={settings.qr_ordering_enabled}
+                      call={(path, method = "GET", body) =>
+                        request(path, token, method, body)
+                      }
+                    />
+                  )}
+                  {(platformPanel || section === "settings") && (
+                    <form
+                      method="post"
+                      key={selected.id}
+                      onSubmit={save}
+                      className="space-y-5 rounded-2xl border border-stone-200 bg-white p-6"
+                      aria-busy={busy}
+                    >
+                      <h2 className="text-lg font-semibold">{t.settings}</h2>
+                      <label>
+                        {t.address}
+                        <textarea
+                          name="address"
+                          rows={3}
+                          maxLength={500}
+                          defaultValue={settings.address ?? ""}
+                        />
+                      </label>
+                      {settings.qr_ordering_enabled && (
+                        <label className="flex items-center gap-3 font-normal">
+                          <input
+                            type="checkbox"
+                            name="bill"
+                            defaultChecked={settings.customer_bill_visible}
+                          />
+                          {t.showBill}
+                        </label>
+                      )}
+                      <label className="flex items-center gap-3 font-normal">
+                        <input
+                          type="checkbox"
+                          name="tables"
+                          defaultChecked={settings.waiter_all_tables}
+                        />
+                        {t.allTables}
+                      </label>
+                      <p className="text-sm leading-6">
+                        {t.mode}:{" "}
+                        <strong>
+                          {settings.qr_ordering_enabled
+                            ? t.billingQr
+                            : t.billingOnly}
+                        </strong>
+                      </p>
+                      {!platformPanel && (
+                        <p className="text-sm leading-7 text-stone-500">
+                          {t.adminManaged}
+                        </p>
+                      )}
+                      <Button disabled={busy} className="w-full sm:w-auto">
+                        {busy ? t.saving : t.save}
+                      </Button>
+                    </form>
+                  )}
+                  {platformPanel && (
+                    <div className="mt-5">
+                      <RestaurantTools
+                        key={selected.id}
+                        restaurantId={selected.id}
+                        view="tables"
+                        platformPanel
+                        qrEnabled={settings.qr_ordering_enabled}
+                        call={(path, method = "GET", body) =>
+                          request(path, token, method, body)
+                        }
                       />
-                    </label>
-                    <label className="flex items-center gap-3 font-normal">
-                      <input
-                        type="checkbox"
-                        name="bill"
-                        defaultChecked={settings.customer_bill_visible}
-                      />
-                      {t.showBill}
-                    </label>
-                    <label className="flex items-center gap-3 font-normal">
-                      <input
-                        type="checkbox"
-                        name="tables"
-                        defaultChecked={settings.waiter_all_tables}
-                      />
-                      {t.allTables}
-                    </label>
-                    <p className="text-sm leading-6">
-                      {t.qrOrdering}:{" "}
-                      <strong>
-                        {settings.qr_ordering_enabled ? t.enabled : t.disabled}
-                      </strong>
-                    </p>
-                    <Button disabled={busy} className="w-full sm:w-auto">
-                      {busy ? t.saving : t.save}
-                    </Button>
-                  </form>
+                    </div>
+                  )}
                   {platformPanel && account.platformAdmin && (
                     <details className="mt-5 rounded-2xl border border-stone-200 bg-white p-5">
                       <summary className="min-h-11 cursor-pointer py-2 font-semibold">

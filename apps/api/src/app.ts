@@ -11,6 +11,8 @@ import { AuthModule } from "./auth/auth.module";
 import { RestaurantsModule } from "./restaurants/restaurants.module";
 import { SuperAdminModule } from "./super-admin/super-admin.module";
 import { env } from "./common/env";
+import { MenuModule } from "./menu/menu.module";
+import { TablesModule } from "./tables/tables.module";
 import { ApiErrors } from "./common/errors";
 @Controller("health")
 class HealthController {
@@ -19,7 +21,14 @@ class HealthController {
   }
 }
 @Module({
-  imports: [DatabaseModule, AuthModule, RestaurantsModule, SuperAdminModule],
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    RestaurantsModule,
+    SuperAdminModule,
+    MenuModule,
+    TablesModule,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 # Restaurant SaaS pilot
 
-A Next.js + NestJS/Fastify modular monolith with PostgreSQL/Prisma and Supabase Auth. Phase 1–2 foundation; separate from the existing habit-ai application.
+A Next.js + NestJS/Fastify modular monolith with PostgreSQL/Prisma and Supabase Auth. Phase 1–3 implementation; separate from the existing habit-ai application.
 
 Architecture, schema relationships, role flows, tenant isolation, visit/order model and issues: [docs/architecture.md](docs/architecture.md).
 Current and planned API endpoints: [docs/api.md](docs/api.md).
@@ -75,7 +75,7 @@ The API integration tests use a fake verifier only inside the test process to is
 
 Implemented: repository/env handling, frontend account/workspace UI, Supabase token verification, explicit membership/role checks, restricted transaction-local database context, RLS on all 19 tables, composite foreign keys, active-session/idempotency constraints, atomic restaurant provisioning, owner settings, restaurant status/QR controls and audit records.
 
-Not yet implemented: staff PIN endpoints, menus/tables UI, orders/bills, guest capability exchange, realtime subscription authorization, storage uploads, offline service worker, subscription enforcement, payment/GST integrations and full operational dashboards. The PWA manifest is present; offline caching is intentionally deferred until cache boundaries are tested. The next phase is menu and table management, followed by visit/session and staff ordering.
+Not yet implemented: staff PIN endpoints, orders/bills, guest capability exchange, realtime subscription authorization, storage uploads, offline service worker, subscription enforcement, payment/GST integrations and full operational dashboards. The PWA manifest is present; offline caching is intentionally deferred until cache boundaries are tested. Menu and physical-table management are now available. The next phase is visit/session management and staff ordering.
 
 Before a live pilot, complete the operational phases and reliability tests, configure authentication abuse protection/MFA, verify restore capability and actual Free-tier quotas, and test weak-network reconnect flows. This foundation is not a production readiness claim.
 
@@ -93,6 +93,14 @@ npx tsx scripts/seed-demo.ts VERIFIED_ADMIN_AUTH_USER_UUID
 
 The command uses backend permission checks and is idempotent by the demo slug; it does not create an Auth account or overwrite an existing restaurant. Real user passwords must be set directly in Supabase, never passed in chat or shell arguments.
 
-English, मराठी and हिन्दी are available throughout the current UI, with a remembered device preference. See [language guidance](docs/languages.md). Menu and ordering workflows are still subsequent phases.
+English, मराठी and हिन्दी are available throughout the current UI, with a remembered device preference. See [language guidance](docs/languages.md). Menu and table management are implemented. Dining sessions and ordering workflows are subsequent phases.
 
 Panel entry points: `http://localhost:3000/admin` is the English-only main system administration panel. `http://localhost:3000` is restaurant/hotel management with English, Marathi and Hindi. The same account can have both roles; each entry point displays controls for its purpose. Customer QR screens will also support the three languages when implemented.
+
+## Menu, tables and purchased mode
+
+Restaurant owners can add/edit menu categories and dishes, enter prices in rupees, change availability and manage physical dining tables. All these screens support English, Marathi and Hindi. Existing order-price snapshots are preserved when menu prices change.
+
+Only the main admin can create/manage restaurant accounts and enable QR access. Billing-only owners cannot enable QR or generate/download codes. Their physical-table API responses contain no QR references. Main-admin QR previews are available only when QR is enabled; customer ordering remains a later phase. See [product access](docs/product-access.md).
+
+The Supabase project also has migration `202610180003_mode_control` applied via the connector. Baseline that migration as applied alongside the two earlier schema migrations before using Prisma deploy against this existing project. It protects QR/subscription entitlements and validates catalog names; it does not change any customer's plan.
