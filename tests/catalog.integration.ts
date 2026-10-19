@@ -315,6 +315,8 @@ test("menu/table ownership, immutable price snapshots and main-admin-only QR ent
     await app.close();
     await db.query("ROLLBACK");
     for (const table of [
+      "restaurant_activity",
+      "subscription_receipts",
       "audit_logs",
       "order_items",
       "orders",

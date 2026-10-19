@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { AdminConsole } from "./admin-console";
 import { RestaurantTools } from "./restaurant-tools";
 import { Button } from "./ui/button";
 import { useLanguage } from "../lib/i18n/provider";
@@ -222,6 +223,29 @@ export default function Workspace({
             status: m.status,
             slug: "",
           })) ?? []);
+  if (platformPanel && account?.platformAdmin)
+    return (
+      <AdminConsole
+        call={async (path, method = "GET", body) => {
+          try {
+            return await request(path, token, method, body);
+          } catch (e) {
+            throw new Error(
+              e instanceof ActionError
+                ? t[e.key]
+                : "Unable to complete request.",
+            );
+          }
+        }}
+        onSignOut={async () => {
+          await client!.auth.signOut();
+          setAccount(null);
+          setToken("");
+          setSelected(null);
+          setSettings(null);
+        }}
+      />
+    );
   return (
     <main className="min-h-screen">
       <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 border-b border-stone-200 px-5 py-5">

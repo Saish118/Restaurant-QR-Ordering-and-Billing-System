@@ -229,6 +229,18 @@ test("platform admin stays English while restaurant language preference is retai
       ],
     }),
   );
+  await page.route("**/v1/admin/overview", (route) =>
+    route.fulfill({
+      json: {
+        stats: { total_restaurants: 1 },
+        health: { api: "ok" },
+        authManagementAvailable: false,
+      },
+    }),
+  );
+  await page.route("**/v1/admin/restaurants?*", (route) =>
+    route.fulfill({ json: [] }),
+  );
   await page.goto("/admin");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(
@@ -243,11 +255,9 @@ test("platform admin stays English while restaurant language preference is retai
   await page.getByLabel("Password", { exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Your restaurants" }),
+    page.getByRole("heading", { name: "Super Admin" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("+ Add a restaurant", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Add restaurant", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "मराठी", exact: true }),
   ).toHaveCount(0);

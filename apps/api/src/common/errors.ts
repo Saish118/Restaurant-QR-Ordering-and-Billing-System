@@ -4,10 +4,12 @@ import {
   ExceptionFilter,
   HttpException,
 } from "@nestjs/common";
+import { Database } from "../database/database.module";
 import { FastifyReply } from "fastify";
 import * as Sentry from "@sentry/node";
 @Catch()
 export class ApiErrors implements ExceptionFilter {
+  constructor(private readonly database?: Database) {}
   catch(error: unknown, host: ArgumentsHost) {
     const reply = host.switchToHttp().getResponse<FastifyReply>();
     if (error instanceof HttpException) {
@@ -35,6 +37,14 @@ export class ApiErrors implements ExceptionFilter {
       return;
     }
     Sentry.captureException(error);
+    const request = host.switchToHttp().getRequest();
+    void this.database
+      ?.recordError(
+        /^P[0-9]+$/.test(code ?? "") ? code! : "UNEXPECTED_ERROR",
+        request.routeOptions?.url ?? "unknown",
+        String(request.id ?? "unknown"),
+      )
+      .catch(() => {});
     reply.status(500).send({ message: "Unable to complete request" });
   }
 }

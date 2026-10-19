@@ -62,3 +62,28 @@ Menu/table mutations reject unknown fields. A restaurant cannot add product-acce
 `qr_ordering_enabled` is the product-mode entitlement, controlled exclusively through the main-admin restaurant endpoint. Subscription payment processing is not implemented. Owners see the purchased mode read-only. Subscription changes and QR flag changes are additionally protected by an invoker trigger under the restricted runtime database role. A suspended tenant remains blocked even with a valid staff login.
 
 The generated table QR is a setup preview only. Its customer menu/order URL will become functional with the customer module. Do not treat the permanent QR reference as an active-visit credential. Future guest endpoints must independently check restaurant status, QR entitlement and fresh dining-session capability on every request.
+
+## Super Admin management extension
+
+Every route below verifies Supabase identity and active platform-admin membership. Prefix `/v1` applies. Non-admin callers receive 403 even when an optional provider is unavailable.
+
+- `GET /admin/overview`: counts, recorded monthly payment collections and health/configuration status.
+- `GET /admin/restaurants?search=&page=1&includeArchived=false`: up to 100 accounts/page, effective expiry status.
+- `POST /admin/restaurants/onboard`: optional Auth-backed owner creation plus restaurant provisioning. Requires server secret key. Existing-user provisioning remains `POST /admin/restaurants`.
+- `GET /admin/restaurants/:id/management`: settings, subscription, owners, usage, staff summaries and last 50 receipts; no staff hashes or passwords.
+- `PATCH /admin/restaurants/:id/profile`: name, slug, address, contactPhone, gstNumber, timeZone.
+- `POST /admin/restaurants/:id/archive` with reason; `POST .../restore`: preserve history, restore suspended.
+- `PATCH .../subscription`: plan, setupAmountMinor, recurringAmountMinor, billingCycle, paymentStatus, trialStartedAt, trialEndsAt, expiresAt (nullable ISO dates).
+- `POST .../trial`: action START/END/EXTEND, days 1–365.
+- `POST .../receipts`: amountMinor > 0, kind SETUP/RECURRING, idempotencyKey UUID, optional paidAt. Repeating the same key/data returns the original receipt; different data returns 409.
+- `POST .../receipts/:receiptId/void`: reason. Voiding does not automatically change the manually managed subscription paid/unpaid label.
+- `PATCH .../features`: flags object; catalog keys or `premium_[a-z0-9_]{1,48}` only.
+- `POST .../owners/link`: userId, displayName. Supply a verified existing Auth UUID.
+- `POST .../owners/login`: email, displayName, password (12–128 chars), optional Auth configuration required.
+- `PATCH .../owners/:userId/access`: active boolean, scoped to restaurant membership.
+- `POST .../owners/:userId/reset-password`: password (12–128 chars); protects platform admins, invalidates existing application tokens.
+- `POST .../staff/:staffId/reset-pin`: pin, 6–8 digits; Argon2id hashing and session revocation.
+- `POST .../tables/:tableId/regenerate-qr`: reason; QR entitlement and current account access required. Previous guest capabilities are revoked.
+- `GET /admin/audit?restaurantId=...` and `GET /admin/errors`: latest 100 records.
+
+See [super-admin.md](super-admin.md) for operational semantics and deferred integrations.

@@ -23,7 +23,18 @@ export class TokenVerifier {
     const { data, error } = await this.auth.getUser(token);
     if (error || !data.user)
       throw new UnauthorizedException("Invalid or expired session");
-    return { id: data.user.id };
+    let issuedAt: number | undefined;
+    try {
+      const claims = JSON.parse(
+        Buffer.from(token.split(".")[1], "base64url").toString(),
+      );
+      if (Number.isInteger(claims.iat)) issuedAt = claims.iat;
+    } catch {}
+    return {
+      id: data.user.id,
+      issuedAt,
+      lastSignInAt: data.user.last_sign_in_at,
+    };
   }
 }
 @Injectable()

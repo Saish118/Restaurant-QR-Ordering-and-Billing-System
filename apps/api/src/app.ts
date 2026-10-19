@@ -6,7 +6,7 @@ import {
   NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import helmet from "@fastify/helmet";
-import { DatabaseModule } from "./database/database.module";
+import { DatabaseModule, Database } from "./database/database.module";
 import { AuthModule } from "./auth/auth.module";
 import { RestaurantsModule } from "./restaurants/restaurants.module";
 import { SuperAdminModule } from "./super-admin/super-admin.module";
@@ -52,7 +52,7 @@ export async function createApp() {
     methods: ["GET", "POST", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
-  app.useGlobalFilters(new ApiErrors());
+  app.useGlobalFilters(new ApiErrors(app.get(Database)));
   app.setGlobalPrefix("v1");
   app.enableShutdownHooks();
   return app;

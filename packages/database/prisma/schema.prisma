@@ -148,6 +148,7 @@ model orders {
   @@unique([restaurant_id, id])
   @@index([restaurant_id, status, created_at], map: "orders_kitchen_idx")
   @@index([restaurant_id, dining_session_id, created_at], map: "orders_session_idx")
+  @@index([created_at], map: "orders_platform_date_idx")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -184,6 +185,9 @@ model restaurant_settings {
   gst_number            String?
   waiter_all_tables     Boolean     @default(true)
   customer_bill_visible Boolean     @default(false)
+  contact_phone         String?
+  time_zone             String      @default("Asia/Kolkata")
+  feature_flags         Json        @default("{\"gst_billing\": false, \"whatsapp_sms\": false, \"waiter_portal\": true, \"kitchen_portal\": true, \"online_payments\": false, \"advanced_reports\": false}")
   restaurants           restaurants @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -205,27 +209,32 @@ model restaurant_users {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model restaurants {
-  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                String
-  slug                String               @unique
-  status              restaurant_status    @default(TRIAL)
-  created_at          DateTime             @default(now()) @db.Timestamptz(6)
-  audit_logs          audit_logs[]
-  bills               bills[]
-  dining_sessions     dining_sessions[]
-  guest_capabilities  guest_capabilities[]
-  menu_categories     menu_categories[]
-  menu_items          menu_items[]
-  order_items         order_items[]
-  orders              orders[]
-  payments            payments[]
-  restaurant_settings restaurant_settings?
-  restaurant_users    restaurant_users[]
-  service_requests    service_requests[]
-  staff               staff[]
-  staff_sessions      staff_sessions[]
-  subscriptions       subscriptions?
-  tables              tables[]
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String
+  slug                  String                  @unique
+  status                restaurant_status       @default(TRIAL)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  deleted_at            DateTime?               @db.Timestamptz(6)
+  audit_logs            audit_logs[]
+  bills                 bills[]
+  dining_sessions       dining_sessions[]
+  guest_capabilities    guest_capabilities[]
+  menu_categories       menu_categories[]
+  menu_items            menu_items[]
+  order_items           order_items[]
+  orders                orders[]
+  payments              payments[]
+  restaurant_activity   restaurant_activity[]
+  restaurant_settings   restaurant_settings?
+  restaurant_users      restaurant_users[]
+  service_requests      service_requests[]
+  staff                 staff[]
+  staff_sessions        staff_sessions[]
+  subscription_receipts subscription_receipts[]
+  subscriptions         subscriptions?
+  tables                tables[]
+
+  @@index([created_at], map: "restaurants_created_idx")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -278,12 +287,18 @@ model staff_sessions {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model subscriptions {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  restaurant_id String      @unique @db.Uuid
-  plan          String      @default("PILOT")
-  trial_ends_at DateTime?   @db.Timestamptz(6)
-  created_at    DateTime    @default(now()) @db.Timestamptz(6)
-  restaurants   restaurants @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurant_id          String      @unique @db.Uuid
+  plan                   String      @default("PILOT")
+  trial_ends_at          DateTime?   @db.Timestamptz(6)
+  created_at             DateTime    @default(now()) @db.Timestamptz(6)
+  setup_amount_minor     Int         @default(0)
+  recurring_amount_minor Int         @default(0)
+  billing_cycle          String      @default("MONTHLY")
+  payment_status         String      @default("UNPAID")
+  trial_started_at       DateTime?   @db.Timestamptz(6)
+  expires_at             DateTime?   @db.Timestamptz(6)
+  restaurants            restaurants @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -303,12 +318,61 @@ model tables {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model users {
-  id               String             @id @db.Uuid
-  display_name     String
-  active           Boolean            @default(true)
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  platform_admins  platform_admins?
-  restaurant_users restaurant_users[]
+  id                    String                  @id @db.Uuid
+  display_name          String
+  active                Boolean                 @default(true)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  email                 String?
+  auth_not_before       DateTime?               @db.Timestamptz(6)
+  platform_admins       platform_admins?
+  restaurant_activity   restaurant_activity[]
+  restaurant_users      restaurant_users[]
+  subscription_receipts subscription_receipts[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model error_logs {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code       String
+  route      String
+  request_id String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at(sort: Desc)], map: "error_logs_date_idx")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model restaurant_activity {
+  restaurant_id String      @db.Uuid
+  user_id       String      @db.Uuid
+  last_seen_at  DateTime    @default(now()) @db.Timestamptz(6)
+  last_login_at DateTime?   @db.Timestamptz(6)
+  restaurants   restaurants @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users         users       @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([restaurant_id, user_id])
+  @@index([user_id], map: "restaurant_activity_user_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscription_receipts {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurant_id   String      @db.Uuid
+  amount_minor    Int
+  kind            String
+  paid_at         DateTime    @default(now()) @db.Timestamptz(6)
+  recorded_by     String      @db.Uuid
+  idempotency_key String      @db.Uuid
+  request_hash    String
+  voided_at       DateTime?   @db.Timestamptz(6)
+  void_reason     String?
+  users           users       @relation(fields: [recorded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  restaurants     restaurants @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([restaurant_id, idempotency_key])
+  @@index([paid_at], map: "receipts_month_idx", where: raw("(voided_at IS NULL)"))
+  @@index([recorded_by], map: "receipts_recorded_by_idx")
 }
 
 enum order_source {
@@ -341,6 +405,7 @@ enum restaurant_status {
   ACTIVE
   SUSPENDED
   CLOSED
+  EXPIRED
 }
 
 enum session_status {

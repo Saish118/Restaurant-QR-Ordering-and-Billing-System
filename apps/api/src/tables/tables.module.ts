@@ -124,7 +124,16 @@ export class TablesController {
           where: { restaurant_id: id },
         });
         const restaurant = await tx.restaurants.findUnique({ where: { id } });
+        const subscription = await tx.subscriptions.findUnique({
+          where: { restaurant_id: id },
+        });
+        const expiry =
+          restaurant?.status === "TRIAL"
+            ? subscription?.trial_ends_at
+            : subscription?.expires_at;
         if (
+          restaurant?.deleted_at ||
+          (expiry && expiry.getTime() <= Date.now()) ||
           !settings?.qr_ordering_enabled ||
           !restaurant ||
           !["ACTIVE", "TRIAL"].includes(restaurant.status)

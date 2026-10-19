@@ -104,3 +104,9 @@ Restaurant owners can add/edit menu categories and dishes, enter prices in rupee
 Only the main admin can create/manage restaurant accounts and enable QR access. Billing-only owners cannot enable QR or generate/download codes. Their physical-table API responses contain no QR references. Main-admin QR previews are available only when QR is enabled; customer ordering remains a later phase. See [product access](docs/product-access.md).
 
 The Supabase project also has migration `202610180003_mode_control` applied via the connector. Baseline that migration as applied alongside the two earlier schema migrations before using Prisma deploy against this existing project. It protects QR/subscription entitlements and validates catalog names; it does not change any customer's plan.
+
+## Super Admin management console
+
+Visit `http://localhost:3000/admin`. The English-only console now includes restaurant lifecycle, owner membership access, subscription/trial controls, manual payment receipts, feature entitlements, usage, support tools and audit/error views. See [docs/super-admin.md](docs/super-admin.md) for setup, the optional server-only Auth secret, and unfinished integrations. Restaurant management at `/` retains the three languages.
+
+All connector-applied migrations in this repository must be baselined before using Prisma deploy on the existing pilot, including `202610180003_mode_control`, `202610190001_admin_status`, `202610190002_admin_console` and `20261019155254_admin_support_indexes`. Check actual applied history first; do not replay schema changes on a populated database. New empty databases use the complete migration chain.

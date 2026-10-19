@@ -2,6 +2,15 @@ import { test, expect, type Page } from "@playwright/test";
 const restaurantId = "22222222-2222-4222-8222-222222222222";
 async function fixture(page: Page, admin = false) {
   let qrEnabled = false;
+  let receipts: any[] = [];
+  let subscription: any = {
+    plan: "pilot",
+    setup_amount_minor: 0,
+    recurring_amount_minor: 0,
+    billing_cycle: "MONTHLY",
+    payment_status: "UNPAID",
+  };
+  let ownerActive = true;
   let categories: any[] = [];
   let dishes: any[] = [];
   let tables: any[] = admin
@@ -50,10 +59,69 @@ async function fixture(page: Page, admin = false) {
           ],
         },
       });
+    if (path === "/admin/overview")
+      return route.fulfill({
+        json: {
+          stats: { total_restaurants: 1, monthly_collections_minor: "0" },
+          health: { api: "ok", database: "ok", storage: "not_configured" },
+          authManagementAvailable: false,
+        },
+      });
+    if (path.endsWith("/management"))
+      return route.fulfill({
+        json: {
+          restaurant,
+          settings: {
+            qr_ordering_enabled: qrEnabled,
+            address: "Pune",
+            feature_flags: {},
+          },
+          subscription,
+          owners: [
+            {
+              user_id: "owner-id",
+              display_name: "Owner",
+              email: "owner@example.com",
+              active: ownerActive,
+              platform_admin: false,
+            },
+          ],
+          receipts,
+          staff: [],
+          usage: { tables: 1, storage_bytes: null },
+          featureCatalog: [],
+          authManagementAvailable: false,
+        },
+      });
     if (path === "/admin/restaurants")
       return route.fulfill({ json: [restaurant] });
     if (path === `/admin/restaurants/${restaurantId}`) {
       qrEnabled = data.qrOrderingEnabled;
+      return route.fulfill({ json: { updated: true } });
+    }
+    if (path.endsWith("/subscription")) {
+      subscription = {
+        ...subscription,
+        plan: data.plan,
+        setup_amount_minor: data.setupAmountMinor,
+        recurring_amount_minor: data.recurringAmountMinor,
+        billing_cycle: data.billingCycle,
+        payment_status: data.paymentStatus,
+      };
+      return route.fulfill({ json: { updated: true } });
+    }
+    if (path.endsWith("/receipts")) {
+      receipts.push({
+        id: "receipt-1",
+        amount_minor: data.amountMinor,
+        kind: data.kind,
+        paid_at: new Date().toISOString(),
+        voided_at: null,
+      });
+      return route.fulfill({ status: 201, json: { id: "receipt-1" } });
+    }
+    if (path.endsWith("/access")) {
+      ownerActive = data.active;
       return route.fulfill({ json: { updated: true } });
     }
     if (path.endsWith("/qr")) {
@@ -194,20 +262,74 @@ test("only main admin can enable QR and generate table code previews", async ({
 }) => {
   await fixture(page, true);
   await expect(page.getByRole("button", { name: "Preview QR" })).toHaveCount(0);
-  await page.getByText("Platform controls", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Turn QR ordering on", exact: true })
-    .click();
+  await page.getByLabel("QR ordering enabled", { exact: true }).check();
+  await page.getByRole("button", { name: "Save access", exact: true }).click();
+  await expect(
+    page.getByText("TRIAL · QR mode", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Support", exact: true }).click();
   await page.getByRole("button", { name: "Preview QR", exact: true }).click();
   await expect(
-    page.getByRole("img", { name: "Table QR preview: Table 1" }),
+    page.getByRole("img", { name: "Table QR setup preview" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Download QR" })).toBeVisible();
-  await page
-    .getByRole("button", { name: "Turn QR ordering off", exact: true })
-    .click();
-  await expect(page.getByRole("button", { name: "Preview QR" })).toHaveCount(0);
+  await page.screenshot({
+    path: "/tmp/restaurant-admin-support.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByLabel("QR ordering enabled", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Save access", exact: true }).click();
   await expect(
-    page.getByRole("img", { name: "Table QR preview: Table 1" }),
-  ).toHaveCount(0);
+    page.getByText("TRIAL · Billing-only mode", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Support", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Preview QR", exact: true }),
+  ).toBeDisabled();
+});
+
+test("admin subscription amounts, manual receipts, owner access and mobile layout", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fixture(page, true);
+  await page.getByRole("button", { name: "Subscription", exact: true }).click();
+  await page.getByLabel("Setup amount (₹)", { exact: true }).fill("499.50");
+  await page.getByLabel("Recurring amount (₹)", { exact: true }).fill("999");
+  await page
+    .getByLabel("Billing cycle", { exact: true })
+    .selectOption("YEARLY");
+  await page
+    .getByRole("button", { name: "Save subscription", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Setup amount (₹)", { exact: true }),
+  ).toHaveValue("499.50");
+  await expect(
+    page.getByLabel("Recurring amount (₹)", { exact: true }),
+  ).toHaveValue("999.00");
+  await page.getByLabel("Amount received (₹)", { exact: true }).fill("999");
+  await page
+    .getByRole("button", { name: "Record payment", exact: true })
+    .click();
+  await expect(page.getByText(/₹999.00 · RECURRING/)).toBeVisible();
+  await page.getByRole("button", { name: "Owners", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Create login", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Disable restaurant access", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Enable restaurant access", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/restaurant-admin-mobile.png",
+    fullPage: true,
+  });
 });

@@ -181,6 +181,8 @@ test("API tenant and role enforcement, atomic provisioning, suspension and audit
   } finally {
     await app.close();
     for (const table of [
+      "restaurant_activity",
+      "subscription_receipts",
       "audit_logs",
       "subscriptions",
       "restaurant_settings",
